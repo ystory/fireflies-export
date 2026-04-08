@@ -30,5 +30,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Fetch base branch
+        run: git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=1
+
       - name: Validate release intent
-        run: pnpm run release:status
+        run: pnpm exec changeset status --since="origin/${{ github.event.pull_request.base.ref }}"
