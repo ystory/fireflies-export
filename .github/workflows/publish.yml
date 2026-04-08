@@ -45,7 +45,7 @@ jobs:
           title: "chore(release): version packages"
           commitMode: github-api
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PR_TOKEN }}
 
       - name: Determine whether publish is needed
         if: steps.changesets.outputs.hasChangesets == 'false'

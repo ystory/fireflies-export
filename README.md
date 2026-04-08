@@ -161,6 +161,7 @@ Use `pnpm run smoke:rate-limit` only when the current key is already blocked and
    If the pull request should not release the package, use `pnpm run changeset:empty` instead.
 2. Merge approved work into `main`.
 3. The `Publish` workflow opens or updates a release pull request with version and changelog changes.
+   This repository expects a `RELEASE_PR_TOKEN` Actions secret so the release PR can trigger the normal pull-request checks.
 4. Merge the release pull request to publish to npm and create a GitHub Release.
 
 ## Contributing and support
