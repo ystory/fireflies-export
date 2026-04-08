@@ -6,9 +6,12 @@
  */
 
 import { runCli } from "../src/cli.js";
+import { isDirectRun } from "../src/is-direct-run.js";
 
-runCli().catch((err) => {
-  const errMsg = err instanceof Error ? err.message : String(err);
-  console.error(`\nFatal error: ${errMsg}\n`);
-  process.exit(1);
-});
+if (isDirectRun(import.meta.url)) {
+  runCli().catch((err) => {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`\nFatal error: ${errMsg}\n`);
+    process.exit(1);
+  });
+}

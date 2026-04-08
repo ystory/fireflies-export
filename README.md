@@ -83,6 +83,7 @@ It will automatically skip already-collected transcripts and stop when Fireflies
 - `.request-counter.json` is a **local estimate**, not the server's source of truth
 - The CLI stops immediately when Fireflies returns `too_many_requests`
 - If Fireflies includes `retryAfter`, the CLI stores that timestamp and refuses new runs until that time passes
+- `pnpm run smoke:rate-limit` also syncs the observed `retryAfter` into `.request-counter.json`
 - The local counter still resets on a new UTC day, but that reset is advisory only
 
 ## Environment Variables
