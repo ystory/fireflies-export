@@ -1,8 +1,5 @@
 import chalk from "chalk";
-import {
-  migrateLegacyDataToProvisionalAccount,
-  PROVISIONAL_LEGACY_ACCOUNT_ID,
-} from "../src/account-storage.js";
+import { migrateLegacyDataToProvisionalAccount } from "../src/account-storage.js";
 import { loadDotenv } from "../src/config.js";
 import { isDirectRun } from "../src/is-direct-run.js";
 
@@ -19,13 +16,13 @@ export async function runMigrateLegacyDataScript(): Promise<void> {
   if (result.migrated) {
     console.log(
       chalk.green(
-        `  Moved legacy data into provisional account "${PROVISIONAL_LEGACY_ACCOUNT_ID}".`,
+        `  Moved legacy data into provisional account "${result.accountId}".`,
       ),
     );
   } else {
     console.log(
       chalk.yellow(
-        `  No legacy unscoped data found. Registered provisional account "${PROVISIONAL_LEGACY_ACCOUNT_ID}" for the current API key.`,
+        `  No legacy unscoped data found. Registered provisional account "${result.accountId}" for the current API key.`,
       ),
     );
   }

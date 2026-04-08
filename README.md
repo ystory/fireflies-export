@@ -69,7 +69,7 @@ data/
     │   ├── .request-counter.json
     │   └── transcripts/
     │       └── <meeting-id>.json
-    └── legacy-unverified-current-account/
+    └── provisional-<token-fingerprint>/
         └── ...                # Optional provisional legacy migration target
 ```
 
@@ -97,7 +97,7 @@ It will automatically skip already-collected transcripts and stop when Fireflies
 - This prevents different Fireflies accounts from sharing the same manifest, transcript cache, or retry-after block state
 - If the current API key has never been seen before, the CLI must successfully resolve the current owner before any files are written
 - If owner lookup fails for a brand-new key, the CLI stops without writing files to avoid cross-account contamination
-- If a known key was manually migrated into `legacy-unverified-current-account`, the CLI can keep using that provisional directory until owner lookup succeeds and promotes it to the real `user_id`
+- If a known key was manually migrated into a provisional directory, the CLI can keep using that token-specific provisional directory until owner lookup succeeds and promotes it to the real `user_id`
 - `FIREFLIES_DATA_DIR` is an advanced escape hatch for an explicit custom directory and bypasses automatic account scoping
 
 ## Environment Variables

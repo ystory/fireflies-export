@@ -39,8 +39,9 @@ interface AccountMetadata {
 type AccountIndex = z.infer<typeof accountIndexSchema>;
 type AccountIndexEntry = z.infer<typeof accountIndexEntrySchema>;
 
-export const PROVISIONAL_LEGACY_ACCOUNT_ID =
-  "legacy-unverified-current-account";
+export function getProvisionalAccountIdForApiKey(apiKey: string): string {
+  return getProvisionalAccountIdForTokenHash(hashApiKey(apiKey));
+}
 
 export interface PrepareAccountDataDirResult {
   accountId: string;
@@ -101,6 +102,10 @@ function accountMetadataPath(dataRoot: string, accountId: string): string {
 
 function hashApiKey(apiKey: string): string {
   return createHash("sha256").update(apiKey).digest("hex");
+}
+
+function getProvisionalAccountIdForTokenHash(tokenHash: string): string {
+  return `provisional-${tokenHash}`;
 }
 
 async function loadJsonFile(filePath: string): Promise<unknown> {
@@ -243,6 +248,7 @@ async function upsertVerifiedAccount(
 
 async function promoteProvisionalAccount(
   dataRoot: string,
+  tokenHash: string,
   provisionalAccountId: string,
   user: {
     user_id: string;
@@ -253,6 +259,7 @@ async function promoteProvisionalAccount(
   const provisionalDir = accountDir(dataRoot, provisionalAccountId);
   const verifiedDir = accountDir(dataRoot, user.user_id);
   const index = await loadAccountIndex(dataRoot);
+  const previous = index.tokens[tokenHash];
 
   if (
     provisionalAccountId !== user.user_id &&
@@ -263,15 +270,7 @@ async function promoteProvisionalAccount(
     await rename(provisionalDir, verifiedDir);
   }
 
-  for (const [tokenHash, entry] of Object.entries(index.tokens)) {
-    if (entry.account_id === provisionalAccountId) {
-      index.tokens[tokenHash] = withUpdatedIndexEntry(
-        entry,
-        user.user_id,
-        true,
-      );
-    }
-  }
+  index.tokens[tokenHash] = withUpdatedIndexEntry(previous, user.user_id, true);
 
   await saveAccountIndex(dataRoot, index);
   await saveAccountMetadata(dataRoot, {
@@ -326,6 +325,7 @@ export async function prepareAccountDataDir({
       const user = await lookupCurrentUser(client);
       await promoteProvisionalAccount(
         dataRoot,
+        tokenHash,
         indexedAccount.account_id,
         user,
       );
@@ -371,16 +371,18 @@ export async function prepareAccountDataDir({
 export async function migrateLegacyDataToProvisionalAccount({
   cwd = process.cwd(),
   env = process.env,
-  provisionalAccountId = PROVISIONAL_LEGACY_ACCOUNT_ID,
+  provisionalAccountId,
 }: MigrateLegacyDataOptions = {}): Promise<MigrateLegacyDataResult> {
   validateConfig({ apiKey: env.FIREFLIES_API_KEY ?? "" });
 
   const dataRoot = getDataRoot(env, cwd);
   const tokenHash = hashApiKey(env.FIREFLIES_API_KEY ?? "");
+  const resolvedProvisionalAccountId =
+    provisionalAccountId ?? getProvisionalAccountIdForTokenHash(tokenHash);
   const legacyManifestPath = join(dataRoot, "manifest.json");
   const legacyCounterPath = join(dataRoot, ".request-counter.json");
   const legacyTranscriptsDir = join(dataRoot, "transcripts");
-  const provisionalDir = accountDir(dataRoot, provisionalAccountId);
+  const provisionalDir = accountDir(dataRoot, resolvedProvisionalAccountId);
   const provisionalManifestPath = join(provisionalDir, "manifest.json");
   const provisionalCounterPath = join(provisionalDir, ".request-counter.json");
   const provisionalTranscriptsDir = join(provisionalDir, "transcripts");
@@ -419,13 +421,13 @@ export async function migrateLegacyDataToProvisionalAccount({
   const index = await loadAccountIndex(dataRoot);
   index.tokens[tokenHash] = withUpdatedIndexEntry(
     index.tokens[tokenHash],
-    provisionalAccountId,
+    resolvedProvisionalAccountId,
     false,
   );
   await saveAccountIndex(dataRoot, index);
 
   await saveAccountMetadata(dataRoot, {
-    account_id: provisionalAccountId,
+    account_id: resolvedProvisionalAccountId,
     status: "provisional",
     user_id: null,
     email: null,
@@ -435,7 +437,7 @@ export async function migrateLegacyDataToProvisionalAccount({
   });
 
   return {
-    accountId: provisionalAccountId,
+    accountId: resolvedProvisionalAccountId,
     dataDir: provisionalDir,
     dataRoot,
     migrated: legacyExists,
