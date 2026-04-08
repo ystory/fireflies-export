@@ -1,0 +1,73 @@
+{
+  "name": "fireflies-export",
+  "version": "0.1.0",
+  "description": "CLI tool to incrementally export meeting transcripts from Fireflies.ai via GraphQL API",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "fireflies-export": "dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.scripts.json --noEmit",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run test",
+    "check:ci": "biome ci . && pnpm run typecheck && pnpm run test:coverage && pnpm run build && publint --strict && npm pack --dry-run --json --cache ./.npm-cache",
+    "prepublishOnly": "pnpm run release:verify",
+    "collect:list": "tsx src/collect-list.ts",
+    "collect:transcripts": "tsx src/collect-transcripts.ts",
+    "collect": "tsx scripts/collect.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "smoke:live": "tsx scripts/smoke-live.ts",
+    "check:package": "pnpm run build && publint --strict && npm pack --dry-run --json --cache ./.npm-cache",
+    "release:verify": "pnpm run check:ci"
+  },
+  "keywords": [
+    "fireflies",
+    "transcript",
+    "export",
+    "meeting",
+    "graphql",
+    "cli"
+  ],
+  "author": "ystory <oss@ystory.kr>",
+  "license": "MIT",
+  "packageManager": "pnpm@10.10.0",
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "dotenv": "^17.4.1",
+    "ora": "^9.3.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.10",
+    "@types/node": "^25.5.2",
+    "@vitest/coverage-v8": "^4.1.3",
+    "publint": "^0.3.18",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ystory/fireflies-export.git"
+  },
+  "homepage": "https://github.com/ystory/fireflies-export#readme",
+  "bugs": {
+    "url": "https://github.com/ystory/fireflies-export/issues"
+  },
+  "engines": {
+    "node": ">=22.14.0"
+  }
+}

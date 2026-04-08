@@ -1,0 +1,147 @@
+# fireflies-export
+
+CLI tool to incrementally export meeting transcripts from [Fireflies.ai](https://fireflies.ai) via its GraphQL API.
+
+Designed for the **Free plan** — automatically respects the daily rate limit (50 requests/day) and picks up where it left off on each run.
+
+## Features
+
+- **Incremental sync** — only fetches new meetings and uncollected transcripts
+- **Crash recovery** — saves progress after each transcript; safely resume anytime
+- **Rate limit aware** — tracks daily API usage and stops before exceeding quota
+- **Raw data preservation** — stores original API responses as JSON files
+
+## Prerequisites
+
+- Node.js 24.14.1 LTS recommended (`.node-version`)
+- Node.js 22 LTS is also checked in CI for compatibility
+- A [Fireflies.ai](https://fireflies.ai) account with an API key
+
+## Installation
+
+```bash
+npm install -g fireflies-export
+```
+
+Or use directly with npx:
+
+```bash
+npx fireflies-export
+```
+
+## Setup
+
+1. Get your API key from [Fireflies Integrations → Fireflies API](https://app.fireflies.ai/integrations/custom/fireflies)
+2. Copy `.env.example` to `.env` in the directory where you'll run the tool:
+
+```bash
+cp .env.example .env
+```
+
+3. Fill in your API key:
+
+```bash
+FIREFLIES_API_KEY=your_api_key_here
+```
+
+## Usage
+
+Run from the directory containing your `.env` file:
+
+```bash
+fireflies-export
+```
+
+This will:
+1. **Collect meeting list** — fetches all meeting metadata into `data/manifest.json`
+2. **Download transcripts** — saves each meeting's full transcript to `data/transcripts/<id>.json`
+
+### Output Structure
+
+```
+data/
+├── manifest.json              # Meeting index with collection status
+├── .request-counter.json      # Daily API usage tracker
+└── transcripts/
+    ├── <meeting-id-1>.json    # Full transcript with sentences
+    ├── <meeting-id-2>.json
+    └── ...
+```
+
+### Daily Workflow
+
+With 200+ meetings, the initial export takes several days on the Free plan (~36 transcripts/day after list collection). Just run the command once daily:
+
+```bash
+fireflies-export
+```
+
+It will automatically skip already-collected transcripts and stop when the daily limit is reached.
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `FIREFLIES_API_KEY` | ✅ | — | Your Fireflies API key |
+| `FIREFLIES_DATA_DIR` | | `./data` | Custom path for data storage |
+
+## Free Plan Limitations
+
+The following transcript fields are only available on paid plans and are **not collected**:
+
+- `audio_url` (Pro+)
+- `video_url` (Business+)
+- `summary` (paid plans)
+
+All other data — including full conversation sentences, speakers, attendees, and meeting metadata — is collected on the Free plan.
+
+## Development
+
+```bash
+# Clone and install
+git clone https://github.com/ystory/fireflies-export.git
+cd fireflies-export
+pnpm install
+
+# Run in development mode
+pnpm run collect
+
+# Lint and static checks
+pnpm run lint
+pnpm run lint:fix
+pnpm run typecheck
+
+# Tests
+pnpm run test
+pnpm run test:watch
+pnpm run test:coverage
+
+# Optional live smoke (requires FIREFLIES_API_KEY)
+pnpm run smoke:live
+
+# Full local quality gate
+pnpm run check
+
+# Package contract checks
+pnpm run check:package
+
+# Release verification gate
+pnpm run release:verify
+
+# Build
+pnpm run build
+```
+
+CI runs `pnpm run check:ci` on pushes and pull requests.
+The default test suite is network-free; keep Fireflies API smoke checks as manual or opt-in runs.
+
+## Contributing and support
+
+- Contribution guide: [CONTRIBUTING.md](https://github.com/ystory/fireflies-export/blob/main/CONTRIBUTING.md)
+- Support policy: [SUPPORT.md](https://github.com/ystory/fireflies-export/blob/main/SUPPORT.md)
+- Security policy: [SECURITY.md](https://github.com/ystory/fireflies-export/blob/main/SECURITY.md)
+- Code of conduct: [CODE_OF_CONDUCT.md](https://github.com/ystory/fireflies-export/blob/main/CODE_OF_CONDUCT.md)
+
+## License
+
+[MIT](LICENSE)
