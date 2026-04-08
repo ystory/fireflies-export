@@ -7,9 +7,9 @@ description: Export Fireflies.ai meeting transcripts with the public fireflies-e
 
 ## Quick Start
 
-Use `npx fireflies-export` as the default entrypoint.
+Use `npx fireflies-export` as the default entrypoint for normal CLI usage from a directory that is not the `fireflies-export` source repository.
 
-Even when the current working directory is the `fireflies-export` source repository, prefer the published CLI surface over repo-local development commands unless the user explicitly asks to work on the package itself.
+If the current working directory is the `fireflies-export` source repository, do not assume bare `npx fireflies-export` will run the published package. Prefer running the CLI from a different working directory, or install it globally for repeated local use.
 
 Recommend:
 
@@ -76,13 +76,13 @@ When explaining a failure, separate the meaning of the error from the next actio
 
 ## Command Examples
 
-Default run:
+Default run from a non-source working directory:
 
 ```bash
 npx fireflies-export
 ```
 
-Repeated local use:
+Repeated local use, including source-repository environments:
 
 ```bash
 npm install -g fireflies-export
