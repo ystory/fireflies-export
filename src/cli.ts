@@ -16,30 +16,30 @@ import chalk from "chalk";
 import { collectList } from "./collect-list.js";
 import { collectTranscripts } from "./collect-transcripts.js";
 import { loadDotenv } from "./config.js";
-import { getRemainingRequests } from "./utils.js";
+import { getRateLimitBlockUntil } from "./utils.js";
 
 interface CliDeps {
   collectList?: typeof collectList;
   collectTranscripts?: typeof collectTranscripts;
-  getRemainingRequests?: typeof getRemainingRequests;
+  getRateLimitBlockUntil?: typeof getRateLimitBlockUntil;
   logger?: Pick<typeof console, "log">;
 }
 
 export async function runCli({
   collectList: collectListImpl = collectList,
   collectTranscripts: collectTranscriptsImpl = collectTranscripts,
-  getRemainingRequests: getRemainingRequestsImpl = getRemainingRequests,
+  getRateLimitBlockUntil: getRateLimitBlockUntilImpl = getRateLimitBlockUntil,
   logger = console,
 }: CliDeps = {}): Promise<void> {
   loadDotenv();
 
   logger.log(chalk.bold("\n=== fireflies-export ===\n"));
 
-  const remaining = await getRemainingRequestsImpl();
-  if (remaining === 0) {
+  const rateLimitBlockUntil = await getRateLimitBlockUntilImpl();
+  if (rateLimitBlockUntil !== null) {
     logger.log(
       chalk.yellow(
-        "Daily API limit already reached (50/50). Run again tomorrow.\n",
+        `Fireflies API asked us to wait until ${new Date(rateLimitBlockUntil).toISOString()}.\n`,
       ),
     );
     return;

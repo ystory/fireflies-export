@@ -9,7 +9,7 @@
 
 import chalk from "chalk";
 import ora from "ora";
-import { queryWithSchema } from "./client.js";
+import { isRateLimitError, queryWithSchema } from "./client.js";
 import { getConfig, validateConfig } from "./config.js";
 import { LIST_TRANSCRIPTS } from "./queries.js";
 import {
@@ -17,11 +17,12 @@ import {
   type TranscriptListItem,
 } from "./schemas.js";
 import {
-  canMakeRequest,
-  getRemainingRequests,
+  getLocalQuotaEstimate,
+  getRateLimitBlockUntil,
   incrementRequestCount,
   loadManifest,
   type ManifestEntry,
+  recordRateLimit,
   saveManifest,
 } from "./utils.js";
 
@@ -39,22 +40,25 @@ export async function collectList(): Promise<void> {
   let skip = 0;
   let newCount = 0;
   let totalApiCalls = 0;
+  const rateLimitBlockUntil = await getRateLimitBlockUntil();
+  const quotaEstimate = await getLocalQuotaEstimate();
 
   console.log(
     chalk.cyan(
-      `  Remaining API requests today: ${await getRemainingRequests()}`,
+      `  Local API usage estimate (${quotaEstimate.date} UTC): ${quotaEstimate.used}/${quotaEstimate.limit}`,
     ),
   );
 
-  while (true) {
-    // Check daily limit
-    if (!(await canMakeRequest())) {
-      spinner.warn(
-        chalk.yellow("Daily API limit reached. Run again tomorrow."),
-      );
-      break;
-    }
+  if (rateLimitBlockUntil !== null) {
+    console.log(
+      chalk.yellow(
+        `  Fireflies API asked us to wait until ${new Date(rateLimitBlockUntil).toISOString()}.`,
+      ),
+    );
+    return;
+  }
 
+  while (true) {
     spinner.start(
       `Fetching page ${Math.floor(skip / pageSize) + 1} (skip=${skip})...`,
     );
@@ -71,17 +75,21 @@ export async function collectList(): Promise<void> {
       );
       items = data.transcripts;
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-
-      if (errMsg.includes("Too many requests")) {
-        spinner.warn(chalk.yellow("API rate limit hit. Run again tomorrow."));
+      if (isRateLimitError(err)) {
+        const blockedUntil = await recordRateLimit(err.retryAfter);
+        const waitMessage =
+          blockedUntil !== null
+            ? ` Wait until ${new Date(blockedUntil).toISOString()}.`
+            : " Run again later.";
+        spinner.warn(chalk.yellow(`API rate limit hit.${waitMessage}`));
       } else {
+        const errMsg = err instanceof Error ? err.message : String(err);
         spinner.fail(chalk.red(`API error: ${errMsg}`));
       }
       break;
     } finally {
-      // Always count toward local quota — failed requests still consume
-      // server-side quota, and conservative over-counting is safer than under.
+      // Keep a local estimate of outbound attempts for visibility, but
+      // let the server's explicit rate-limit response decide when to stop.
       await incrementRequestCount();
       totalApiCalls++;
     }
@@ -145,7 +153,7 @@ export async function collectList(): Promise<void> {
       `\n  Manifest updated: ${chalk.bold(String(manifest.entries.length))} total meetings, ` +
         `${chalk.green(`${newCount} new`)}, ` +
         `${chalk.yellow(`${uncollected} uncollected`)} ` +
-        `(${totalApiCalls} API calls used)`,
+        `(${totalApiCalls} API attempts this run)`,
     ),
   );
 }
