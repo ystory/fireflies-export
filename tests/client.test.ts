@@ -6,6 +6,7 @@ import {
   isRateLimitError,
   queryWithSchema,
 } from "../src/client.js";
+import { readFixtureJson } from "./helpers.js";
 
 describe("createGraphQLClient", () => {
   afterEach(() => {
@@ -84,28 +85,25 @@ describe("createGraphQLClient", () => {
   });
 
   it("preserves structured rate-limit details from GraphQL errors", async () => {
-    const retryAfter = Date.parse("2026-04-09T00:00:00.000Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-08T12:00:00.000Z"));
+
+    const body = await readFixtureJson<{
+      errors: Array<{
+        extensions?: {
+          metadata?: {
+            retryAfter?: number;
+          };
+          helpUrls?: string[];
+        };
+      }>;
+    }>("fireflies-too-many-requests.json");
+    const retryAfter = body.errors[0]?.extensions?.metadata?.retryAfter;
     const fetchFn = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          errors: [
-            {
-              message: "Too many requests",
-              extensions: {
-                code: "too_many_requests",
-                status: 429,
-                metadata: {
-                  retryAfter,
-                },
-              },
-            },
-          ],
-        }),
-        {
-          status: 429,
-          headers: { "Content-Type": "application/json" },
-        },
-      ),
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+      }),
     );
 
     const client = createGraphQLClient({
@@ -124,6 +122,9 @@ describe("createGraphQLClient", () => {
       code: "too_many_requests",
       status: 429,
       retryAfter,
+      helpUrls: [
+        "https://docs.fireflies.ai/miscellaneous/error-codes#too_many_requests",
+      ],
     });
     expect(isRateLimitError(error)).toBe(true);
   });

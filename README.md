@@ -126,6 +126,9 @@ pnpm run test:coverage
 # Optional live smoke (requires FIREFLIES_API_KEY)
 pnpm run smoke:live
 
+# Optional rate-limit smoke (expects the current key to already be rate-limited)
+pnpm run smoke:rate-limit
+
 # Full local quality gate
 pnpm run check
 
@@ -150,6 +153,7 @@ pnpm run build
 
 CI runs `pnpm run check:ci` on pushes and pull requests.
 The default test suite is network-free; keep Fireflies API smoke checks as manual or opt-in runs.
+Use `pnpm run smoke:rate-limit` only when the current key is already blocked and you want to verify the live 429 contract.
 
 ## Release workflow
 

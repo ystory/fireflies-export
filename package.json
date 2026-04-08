@@ -30,6 +30,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "smoke:live": "tsx scripts/smoke-live.ts",
+    "smoke:rate-limit": "tsx scripts/smoke-rate-limit.ts",
     "check:package": "pnpm run build && publint --strict && npm pack --dry-run --json --cache ./.npm-cache",
     "release:verify": "pnpm run check:ci",
     "changeset": "changeset",
