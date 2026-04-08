@@ -15,6 +15,7 @@
 - `main` is protected. Make changes on a branch and use a pull request.
 - Prefer focused, root-cause-complete changes over broad refactors.
 - Update `README.md` and `CONTRIBUTING.md` when commands, release behavior, or operator-facing workflow changes.
+- For commit authoring, pull request authoring, and merge decisions, read `.agents/rules/git-and-pr.md`.
 
 ## Validation
 
