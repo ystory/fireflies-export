@@ -34,6 +34,7 @@ Node.js `24.14.1` is the recommended local version. Node.js `22.14.0+` is the mi
 2. Merge changes into `main`.
 3. The `Publish` workflow opens or updates a release pull request with version and changelog changes.
    The workflow requires a `RELEASE_PR_TOKEN` repository secret so that the release PR triggers the usual required checks.
+   Release pull requests are exempt from the normal changeset-presence check because they consume existing changesets.
 4. Merge that release pull request to publish to npm and create a GitHub Release.
 
 ## Pull request checklist
