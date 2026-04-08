@@ -1,0 +1,31 @@
+{
+  "errors": [
+    {
+      "friendly": true,
+      "message": "Too many requests. Please retry after Thu, 09 Apr 2026 00:00:00 GMT (UTC)",
+      "locations": [
+        {
+          "line": 1,
+          "column": 50
+        }
+      ],
+      "path": [
+        "transcripts"
+      ],
+      "code": "too_many_requests",
+      "extensions": {
+        "code": "too_many_requests",
+        "status": 429,
+        "metadata": {
+          "retryAfter": 1775692800978
+        },
+        "helpUrls": [
+          "https://docs.fireflies.ai/miscellaneous/error-codes#too_many_requests"
+        ]
+      }
+    }
+  ],
+  "data": {
+    "transcripts": null
+  }
+}

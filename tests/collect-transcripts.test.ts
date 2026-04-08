@@ -11,9 +11,13 @@ import {
 
 const queryMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../src/client.js", () => ({
-  queryWithSchema: queryMock,
-}));
+vi.mock("../src/client.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/client.js")>();
+  return {
+    ...actual,
+    queryWithSchema: queryMock,
+  };
+});
 
 vi.mock("ora", () => ({
   default: () => ({
@@ -100,6 +104,7 @@ describe("collectTranscripts", () => {
     vi.stubEnv("FIREFLIES_API_KEY", "test-api-key");
 
     const config = getConfig();
+    const retryAfter = Date.parse("2026-04-09T00:00:00.000Z");
 
     await writeJson(config.manifestPath, {
       last_full_sync: "2026-04-01T00:00:00.000Z",
@@ -119,7 +124,13 @@ describe("collectTranscripts", () => {
       ],
     });
 
-    queryMock.mockRejectedValueOnce(new Error("Too many requests"));
+    queryMock.mockRejectedValueOnce({
+      name: "FirefliesApiError",
+      message: "Fireflies API GraphQL error: Too many requests",
+      code: "too_many_requests",
+      status: 429,
+      retryAfter,
+    });
     vi.spyOn(console, "log").mockImplementation(() => {});
 
     const { collectTranscripts } = await import(
@@ -135,6 +146,14 @@ describe("collectTranscripts", () => {
     expect(manifest.entries[0]).toMatchObject({
       collected: false,
       collected_at: null,
+    });
+    const counter = await readJson<{
+      blocked_until: number | null;
+      count: number;
+    }>(config.counterPath);
+    expect(counter).toMatchObject({
+      blocked_until: retryAfter,
+      count: 1,
     });
     expect(existsSync(join(config.transcriptsDir, "meeting-2.json"))).toBe(
       false,

@@ -89,7 +89,7 @@ async function loadCounter(): Promise<RequestCounter> {
   const { counterPath } = getConfig();
 
   if (!existsSync(counterPath)) {
-    return { date: todayString(), count: 0 };
+    return { date: todayString(), count: 0, blocked_until: null };
   }
   const raw = await readFile(counterPath, "utf-8");
 
@@ -102,12 +102,19 @@ async function loadCounter(): Promise<RequestCounter> {
   }
 
   const counter = parseWithSchema(requestCounterSchema, parsed, counterPath);
+  const blockedUntil =
+    counter.blocked_until !== null && counter.blocked_until > Date.now()
+      ? counter.blocked_until
+      : null;
 
   // Reset counter if it's a new day
   if (counter.date !== todayString()) {
-    return { date: todayString(), count: 0 };
+    return { date: todayString(), count: 0, blocked_until: blockedUntil };
   }
-  return counter;
+  return {
+    ...counter,
+    blocked_until: blockedUntil,
+  };
 }
 
 async function saveCounter(counter: RequestCounter): Promise<void> {
@@ -123,12 +130,41 @@ export async function incrementRequestCount(): Promise<number> {
   return counter.count;
 }
 
+export async function getLocalQuotaEstimate(): Promise<{
+  date: string;
+  used: number;
+  limit: number;
+}> {
+  const { dailyRequestLimit } = getConfig();
+  const counter = await loadCounter();
+
+  return {
+    date: counter.date,
+    used: counter.count,
+    limit: dailyRequestLimit,
+  };
+}
+
 export async function getRemainingRequests(): Promise<number> {
   const { dailyRequestLimit } = getConfig();
   const counter = await loadCounter();
   return Math.max(0, dailyRequestLimit - counter.count);
 }
 
-export async function canMakeRequest(): Promise<boolean> {
-  return (await getRemainingRequests()) > 0;
+export async function getRateLimitBlockUntil(): Promise<number | null> {
+  const counter = await loadCounter();
+  return counter.blocked_until;
+}
+
+export async function recordRateLimit(
+  retryAfter: number | null,
+): Promise<number | null> {
+  const counter = await loadCounter();
+  const blockedUntil =
+    retryAfter !== null && retryAfter > Date.now()
+      ? retryAfter
+      : counter.blocked_until;
+  counter.blocked_until = blockedUntil;
+  await saveCounter(counter);
+  return blockedUntil;
 }

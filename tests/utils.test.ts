@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getConfig } from "../src/config.js";
 import {
+  getRateLimitBlockUntil,
   getRemainingRequests,
   hasValidTranscriptFile,
   incrementRequestCount,
   loadManifest,
+  recordRateLimit,
 } from "../src/utils.js";
 import {
   cleanupDir,
@@ -55,7 +57,23 @@ describe("utils", () => {
     expect(counter).toEqual({
       date: "2026-04-09",
       count: 1,
+      blocked_until: null,
     });
+  });
+
+  it("preserves an explicit server retryAfter block across a UTC day change", async () => {
+    dataDir = await createTempDataDir();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-08T10:00:00.000Z"));
+
+    const retryAfter = Date.parse("2026-04-09T12:00:00.000Z");
+    await recordRateLimit(retryAfter);
+    await incrementRequestCount();
+
+    vi.setSystemTime(new Date("2026-04-09T00:05:00.000Z"));
+
+    expect(await getRemainingRequests()).toBe(50);
+    expect(await getRateLimitBlockUntil()).toBe(retryAfter);
   });
 
   it("throws a helpful error when manifest.json is invalid", async () => {

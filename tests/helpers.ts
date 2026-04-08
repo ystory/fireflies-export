@@ -27,3 +27,8 @@ export async function readJson<T>(filePath: string): Promise<T> {
   const raw = await readFile(filePath, "utf-8");
   return JSON.parse(raw) as T;
 }
+
+export async function readFixtureJson<T>(fileName: string): Promise<T> {
+  const raw = await readFile(join("tests", "fixtures", fileName), "utf-8");
+  return JSON.parse(raw) as T;
+}

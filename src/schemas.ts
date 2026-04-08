@@ -31,6 +31,13 @@ export const manifestSchema = z.object({
 export const requestCounterSchema = z.object({
   date: z.iso.date(),
   count: z.number().int().nonnegative(),
+  blocked_until: z
+    .number()
+    .int()
+    .nonnegative()
+    .nullable()
+    .optional()
+    .transform((value) => value ?? null),
 });
 
 const meetingAttendeeSchema = z

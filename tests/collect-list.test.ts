@@ -9,9 +9,13 @@ import {
 
 const queryMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../src/client.js", () => ({
-  queryWithSchema: queryMock,
-}));
+vi.mock("../src/client.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/client.js")>();
+  return {
+    ...actual,
+    queryWithSchema: queryMock,
+  };
+});
 
 vi.mock("ora", () => ({
   default: () => ({
@@ -115,5 +119,34 @@ describe("collectList", () => {
       "known-1",
     ]);
     expect(manifest.entries[0]?.collected).toBe(false);
+  });
+
+  it("stores server retryAfter when the list endpoint is rate-limited", async () => {
+    dataDir = await createTempDataDir();
+    vi.stubEnv("FIREFLIES_API_KEY", "test-api-key");
+
+    const retryAfter = Date.parse("2026-04-09T00:00:00.000Z");
+
+    queryMock.mockRejectedValueOnce({
+      name: "FirefliesApiError",
+      message: "Fireflies API GraphQL error: Too many requests",
+      code: "too_many_requests",
+      status: 429,
+      retryAfter,
+    });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const { collectList } = await import("../src/collect-list.js");
+    await collectList();
+
+    const counter = await readJson<{
+      blocked_until: number | null;
+      count: number;
+    }>(getConfig().counterPath);
+
+    expect(counter).toMatchObject({
+      blocked_until: retryAfter,
+      count: 1,
+    });
   });
 });

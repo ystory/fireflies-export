@@ -2,13 +2,13 @@
 
 CLI tool to incrementally export meeting transcripts from [Fireflies.ai](https://fireflies.ai) via its GraphQL API.
 
-Designed for the **Free plan** — automatically respects the daily rate limit (50 requests/day) and picks up where it left off on each run.
+Designed for the **Free plan** — keeps a local usage estimate, honors the API's explicit rate-limit response, and picks up where it left off on each run.
 
 ## Features
 
 - **Incremental sync** — only fetches new meetings and uncollected transcripts
 - **Crash recovery** — saves progress after each transcript; safely resume anytime
-- **Rate limit aware** — tracks daily API usage and stops before exceeding quota
+- **Rate limit aware** — tracks a local usage estimate and stops when Fireflies returns an explicit quota error
 - **Raw data preservation** — stores original API responses as JSON files
 
 ## Prerequisites
@@ -61,7 +61,7 @@ This will:
 ```
 data/
 ├── manifest.json              # Meeting index with collection status
-├── .request-counter.json      # Daily API usage tracker
+├── .request-counter.json      # Local API usage estimate + last retryAfter block
 └── transcripts/
     ├── <meeting-id-1>.json    # Full transcript with sentences
     ├── <meeting-id-2>.json
@@ -76,7 +76,14 @@ With 200+ meetings, the initial export takes several days on the Free plan (~36 
 fireflies-export
 ```
 
-It will automatically skip already-collected transcripts and stop when the daily limit is reached.
+It will automatically skip already-collected transcripts and stop when Fireflies asks the client to wait before retrying.
+
+### Rate-limit behavior
+
+- `.request-counter.json` is a **local estimate**, not the server's source of truth
+- The CLI stops immediately when Fireflies returns `too_many_requests`
+- If Fireflies includes `retryAfter`, the CLI stores that timestamp and refuses new runs until that time passes
+- The local counter still resets on a new UTC day, but that reset is advisory only
 
 ## Environment Variables
 
@@ -119,6 +126,9 @@ pnpm run test:coverage
 # Optional live smoke (requires FIREFLIES_API_KEY)
 pnpm run smoke:live
 
+# Optional rate-limit smoke (expects the current key to already be rate-limited)
+pnpm run smoke:rate-limit
+
 # Full local quality gate
 pnpm run check
 
@@ -143,6 +153,7 @@ pnpm run build
 
 CI runs `pnpm run check:ci` on pushes and pull requests.
 The default test suite is network-free; keep Fireflies API smoke checks as manual or opt-in runs.
+Use `pnpm run smoke:rate-limit` only when the current key is already blocked and you want to verify the live 429 contract.
 
 ## Release workflow
 
