@@ -37,7 +37,8 @@
     "version:packages": "changeset version",
     "release:status": "changeset status",
     "release:publish": "changeset publish",
-    "changeset:empty": "changeset --empty"
+    "changeset:empty": "changeset --empty",
+    "migrate:legacy-account": "tsx scripts/migrate-legacy-data.ts"
   },
   "keywords": [
     "fireflies",

@@ -6,10 +6,12 @@ describe("runCli", () => {
     const log = vi.fn();
     const collectList = vi.fn();
     const collectTranscripts = vi.fn();
+    const prepareAccountDataDir = vi.fn().mockResolvedValue(undefined);
     const blockedUntil = Date.parse("2026-04-09T00:00:00.000Z");
 
     await runCli({
       logger: { log },
+      prepareAccountDataDir,
       getRateLimitBlockUntil: vi.fn().mockResolvedValue(blockedUntil),
       collectList,
       collectTranscripts,
@@ -26,9 +28,11 @@ describe("runCli", () => {
     const log = vi.fn();
     const collectList = vi.fn();
     const collectTranscripts = vi.fn();
+    const prepareAccountDataDir = vi.fn().mockResolvedValue(undefined);
 
     await runCli({
       logger: { log },
+      prepareAccountDataDir,
       getRateLimitBlockUntil: vi.fn().mockResolvedValue(null),
       collectList,
       collectTranscripts,
@@ -36,6 +40,7 @@ describe("runCli", () => {
 
     expect(collectList).toHaveBeenCalledTimes(1);
     expect(collectTranscripts).toHaveBeenCalledTimes(1);
+    expect(prepareAccountDataDir).toHaveBeenCalledTimes(1);
     expect(log).toHaveBeenCalledWith(
       expect.stringContaining("fireflies-export"),
     );

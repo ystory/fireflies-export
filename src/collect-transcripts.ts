@@ -10,6 +10,7 @@
 
 import chalk from "chalk";
 import ora from "ora";
+import { prepareAccountDataDir } from "./account-storage.js";
 import { isRateLimitError, queryWithSchema } from "./client.js";
 import { loadDotenv, validateConfig } from "./config.js";
 import { isDirectRun } from "./is-direct-run.js";
@@ -142,9 +143,11 @@ export async function collectTranscripts(): Promise<void> {
 // Run only when executed directly (not when imported)
 if (isDirectRun(import.meta.url)) {
   loadDotenv();
-  collectTranscripts().catch((err) => {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    console.error(chalk.red(`\nFatal error: ${errMsg}\n`));
-    process.exit(1);
-  });
+  prepareAccountDataDir()
+    .then(() => collectTranscripts())
+    .catch((err) => {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error(chalk.red(`\nFatal error: ${errMsg}\n`));
+      process.exit(1);
+    });
 }

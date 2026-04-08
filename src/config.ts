@@ -4,6 +4,7 @@ import { config as loadDotenvConfig } from "dotenv";
 const DEFAULT_API_URL = "https://api.fireflies.ai/graphql";
 const DEFAULT_DAILY_REQUEST_LIMIT = 50;
 const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_DATA_ROOT_NAME = "data";
 
 export const MISSING_API_KEY_MESSAGE =
   "FIREFLIES_API_KEY is not set.\n" +
@@ -25,11 +26,18 @@ export function loadDotenv(cwd: string = process.cwd()): void {
   loadDotenvConfig({ path: join(cwd, ".env") });
 }
 
+export function getDataRoot(
+  env: NodeJS.ProcessEnv = process.env,
+  cwd: string = process.cwd(),
+): string {
+  return env.FIREFLIES_DATA_ROOT ?? join(cwd, DEFAULT_DATA_ROOT_NAME);
+}
+
 export function getConfig(
   env: NodeJS.ProcessEnv = process.env,
   cwd: string = process.cwd(),
 ): AppConfig {
-  const dataDir = env.FIREFLIES_DATA_DIR ?? join(cwd, "data");
+  const dataDir = env.FIREFLIES_DATA_DIR ?? getDataRoot(env, cwd);
 
   return {
     apiUrl: DEFAULT_API_URL,

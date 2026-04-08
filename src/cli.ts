@@ -13,6 +13,7 @@
  */
 
 import chalk from "chalk";
+import { prepareAccountDataDir } from "./account-storage.js";
 import { collectList } from "./collect-list.js";
 import { collectTranscripts } from "./collect-transcripts.js";
 import { loadDotenv } from "./config.js";
@@ -23,6 +24,7 @@ interface CliDeps {
   collectList?: typeof collectList;
   collectTranscripts?: typeof collectTranscripts;
   getRateLimitBlockUntil?: typeof getRateLimitBlockUntil;
+  prepareAccountDataDir?: typeof prepareAccountDataDir;
   logger?: Pick<typeof console, "log">;
 }
 
@@ -30,9 +32,11 @@ export async function runCli({
   collectList: collectListImpl = collectList,
   collectTranscripts: collectTranscriptsImpl = collectTranscripts,
   getRateLimitBlockUntil: getRateLimitBlockUntilImpl = getRateLimitBlockUntil,
+  prepareAccountDataDir: prepareAccountDataDirImpl = prepareAccountDataDir,
   logger = console,
 }: CliDeps = {}): Promise<void> {
   loadDotenv();
+  await prepareAccountDataDirImpl();
 
   logger.log(chalk.bold("\n=== fireflies-export ===\n"));
 

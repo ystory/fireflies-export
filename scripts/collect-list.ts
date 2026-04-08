@@ -1,3 +1,4 @@
+import { prepareAccountDataDir } from "../src/account-storage.js";
 import { collectList } from "../src/collect-list.js";
 import { loadDotenv } from "../src/config.js";
 import { isDirectRun } from "../src/is-direct-run.js";
@@ -5,13 +6,16 @@ import { isDirectRun } from "../src/is-direct-run.js";
 interface CollectListScriptDeps {
   collectList?: typeof collectList;
   loadDotenv?: typeof loadDotenv;
+  prepareAccountDataDir?: typeof prepareAccountDataDir;
 }
 
 export async function runCollectListScript({
   collectList: collectListImpl = collectList,
   loadDotenv: loadDotenvImpl = loadDotenv,
+  prepareAccountDataDir: prepareAccountDataDirImpl = prepareAccountDataDir,
 }: CollectListScriptDeps = {}): Promise<void> {
   loadDotenvImpl();
+  await prepareAccountDataDirImpl();
   await collectListImpl();
 }
 

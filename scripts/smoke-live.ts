@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { prepareAccountDataDir } from "../src/account-storage.js";
 import { queryWithSchema } from "../src/client.js";
 import { loadDotenv, validateConfig } from "../src/config.js";
 import { GET_TRANSCRIPT, LIST_TRANSCRIPTS } from "../src/queries.js";
@@ -10,6 +11,7 @@ import {
 async function main(): Promise<void> {
   loadDotenv();
   validateConfig();
+  await prepareAccountDataDir();
 
   console.log(chalk.bold("\n=== fireflies-export live smoke ===\n"));
 
