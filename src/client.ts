@@ -10,7 +10,7 @@ interface GraphQLErrorExtensions {
   friendly?: boolean;
   helpUrls?: string[];
   metadata?: {
-    retryAfter?: number;
+    retryAfter?: unknown;
   };
 }
 
@@ -22,7 +22,7 @@ interface GraphQLErrorResponse {
   friendly?: boolean;
   helpUrls?: string[];
   metadata?: {
-    retryAfter?: number;
+    retryAfter?: unknown;
   };
   extensions?: GraphQLErrorExtensions;
 }
@@ -74,6 +74,14 @@ function parseRetryAfterHeader(value: string | null): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+function parseRetryAfterMetadata(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+
+  return value > Date.now() ? value : null;
+}
+
 function buildGraphQLApiError<T = unknown>(
   response: Response,
   json: GraphQLResponse<T>,
@@ -85,9 +93,12 @@ function buildGraphQLApiError<T = unknown>(
     firstError?.extensions?.status ??
     firstError?.status ??
     (response.status >= 400 ? response.status : undefined);
-  const retryAfter =
+  const metadataRetryAfter = parseRetryAfterMetadata(
     firstError?.extensions?.metadata?.retryAfter ??
-    firstError?.metadata?.retryAfter ??
+      firstError?.metadata?.retryAfter,
+  );
+  const retryAfter =
+    metadataRetryAfter ??
     parseRetryAfterHeader(response.headers.get("retry-after"));
   const helpUrls =
     firstError?.extensions?.helpUrls ?? firstError?.helpUrls ?? [];

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   createGraphQLClient,
@@ -8,6 +8,10 @@ import {
 } from "../src/client.js";
 
 describe("createGraphQLClient", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("returns data from a successful GraphQL response", async () => {
     const fetchFn = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ data: { transcripts: [] } }), {
@@ -122,6 +126,54 @@ describe("createGraphQLClient", () => {
       retryAfter,
     });
     expect(isRateLimitError(error)).toBe(true);
+  });
+
+  it("falls back to the Retry-After header when metadata retryAfter is not a future timestamp", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-08T12:00:00.000Z"));
+
+    const fetchFn = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          errors: [
+            {
+              message: "Too many requests",
+              extensions: {
+                code: "too_many_requests",
+                status: 429,
+                metadata: {
+                  retryAfter: 120,
+                },
+              },
+            },
+          ],
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": "120",
+          },
+        },
+      ),
+    );
+
+    const client = createGraphQLClient({
+      apiUrl: "https://example.com/graphql",
+      apiKey: "secret-key",
+      fetchFn,
+    });
+
+    const error = await client
+      .query("query Test {}")
+      .catch((caughtError: unknown) => caughtError);
+
+    expect(error).toBeInstanceOf(FirefliesApiError);
+    expect(error).toMatchObject({
+      code: "too_many_requests",
+      status: 429,
+      retryAfter: Date.now() + 120_000,
+    });
   });
 
   it("throws a schema validation error when the response shape is invalid", async () => {
