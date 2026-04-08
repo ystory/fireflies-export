@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fireflies Export"
+  short_description: "Export Fireflies transcripts with the public CLI."
+  default_prompt: "Use $fireflies-export to export Fireflies.ai meeting transcripts with a local .env file."

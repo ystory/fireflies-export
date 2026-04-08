@@ -118,6 +118,8 @@ All other data — including full conversation sentences, speakers, attendees, a
 
 ## Development
 
+This repository also includes a reusable public CLI skill for agents under `skills/fireflies-export`.
+
 ```bash
 # Clone and install
 git clone https://github.com/ystory/fireflies-export.git
