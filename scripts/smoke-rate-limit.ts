@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { prepareAccountDataDir } from "../src/account-storage.js";
 import {
   createGraphQLClient,
   type FirefliesApiError,
@@ -75,6 +76,7 @@ export async function runRateLimitSmoke({
 async function main(): Promise<void> {
   loadDotenv();
   validateConfig();
+  await prepareAccountDataDir();
   await runRateLimitSmoke();
 }
 

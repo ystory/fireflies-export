@@ -3,6 +3,16 @@
  * Plain template literals — no external gql tag needed.
  */
 
+export const GET_CURRENT_USER = /* GraphQL */ `
+  query GetCurrentUser {
+    user {
+      user_id
+      email
+      name
+    }
+  }
+`;
+
 /**
  * Fetches a paginated list of transcripts with metadata only.
  * Used for building the manifest without downloading full transcript content.

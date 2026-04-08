@@ -9,6 +9,20 @@ const normalizedStringArraySchema = z
   .array(z.string())
   .nullish()
   .transform((value) => value ?? []);
+const normalizedNullableStringSchema = z
+  .string()
+  .nullish()
+  .transform((value) => value ?? null);
+
+const currentUserSchema = z.object({
+  user_id: z.string(),
+  email: normalizedNullableStringSchema,
+  name: normalizedNullableStringSchema,
+});
+
+export const currentUserResponseSchema = z.object({
+  user: currentUserSchema,
+});
 
 export const manifestEntrySchema = z.object({
   id: z.string(),
@@ -128,6 +142,7 @@ export const transcriptDetailResponseSchema = z.object({
 export type ManifestEntry = z.infer<typeof manifestEntrySchema>;
 export type Manifest = z.infer<typeof manifestSchema>;
 export type RequestCounter = z.infer<typeof requestCounterSchema>;
+export type CurrentUser = z.infer<typeof currentUserSchema>;
 export type TranscriptListItem = z.infer<typeof transcriptListItemSchema>;
 export type ListTranscriptsResponse = z.infer<
   typeof listTranscriptsResponseSchema

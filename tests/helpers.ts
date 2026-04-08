@@ -9,6 +9,13 @@ export async function createTempDataDir(): Promise<string> {
   return dir;
 }
 
+export async function createTempDataRoot(): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), "fireflies-export-root-"));
+  vi.stubEnv("FIREFLIES_DATA_ROOT", dir);
+  delete process.env.FIREFLIES_DATA_DIR;
+  return dir;
+}
+
 export async function cleanupDir(dir?: string): Promise<void> {
   if (dir) {
     await rm(dir, { recursive: true, force: true });
