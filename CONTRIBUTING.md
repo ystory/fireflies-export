@@ -24,7 +24,16 @@ Node.js `24.14.1` is the recommended local version. Node.js `22.14.0+` is the mi
 - Treat Fireflies live API calls as opt-in smoke checks, not default CI.
 - Preserve incremental sync behavior and quota accounting semantics.
 - Add or update tests whenever behavior changes.
-- Run `pnpm run release:verify` before cutting a release tag.
+- Add a changeset for user-visible changes with `pnpm run changeset`.
+- If a pull request should not trigger a package release, add an empty changeset with `pnpm run changeset:empty`.
+- Run `pnpm run release:verify` before cutting a release.
+
+## Release workflow
+
+1. Add a changeset in the pull request that should affect the next release.
+2. Merge changes into `main`.
+3. The `Publish` workflow opens or updates a release pull request with version and changelog changes.
+4. Merge that release pull request to publish to npm and create a GitHub Release.
 
 ## Pull request checklist
 

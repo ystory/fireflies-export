@@ -128,12 +128,29 @@ pnpm run check:package
 # Release verification gate
 pnpm run release:verify
 
+# Add a release note entry for user-visible changes
+pnpm run changeset
+
+# Mark a PR as no-release while still satisfying release intent checks
+pnpm run changeset:empty
+
+# Inspect the pending release plan
+pnpm run release:status
+
 # Build
 pnpm run build
 ```
 
 CI runs `pnpm run check:ci` on pushes and pull requests.
 The default test suite is network-free; keep Fireflies API smoke checks as manual or opt-in runs.
+
+## Release workflow
+
+1. Add a changeset for user-visible changes with `pnpm run changeset`.
+   If the pull request should not release the package, use `pnpm run changeset:empty` instead.
+2. Merge approved work into `main`.
+3. The `Publish` workflow opens or updates a release pull request with version and changelog changes.
+4. Merge the release pull request to publish to npm and create a GitHub Release.
 
 ## Contributing and support
 
