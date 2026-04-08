@@ -10,7 +10,8 @@
 import chalk from "chalk";
 import ora from "ora";
 import { isRateLimitError, queryWithSchema } from "./client.js";
-import { getConfig, validateConfig } from "./config.js";
+import { getConfig, loadDotenv, validateConfig } from "./config.js";
+import { isDirectRun } from "./is-direct-run.js";
 import { LIST_TRANSCRIPTS } from "./queries.js";
 import {
   listTranscriptsResponseSchema,
@@ -159,11 +160,8 @@ export async function collectList(): Promise<void> {
 }
 
 // Run only when executed directly (not when imported)
-const isDirectRun =
-  import.meta.url === `file://${process.argv[1]}` ||
-  process.argv[1]?.endsWith("collect-list.ts");
-
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
+  loadDotenv();
   collectList().catch((err) => {
     const errMsg = err instanceof Error ? err.message : String(err);
     console.error(chalk.red(`\nFatal error: ${errMsg}\n`));

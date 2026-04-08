@@ -16,6 +16,7 @@ import chalk from "chalk";
 import { collectList } from "./collect-list.js";
 import { collectTranscripts } from "./collect-transcripts.js";
 import { loadDotenv } from "./config.js";
+import { isDirectRun } from "./is-direct-run.js";
 import { getRateLimitBlockUntil } from "./utils.js";
 
 interface CliDeps {
@@ -54,11 +55,7 @@ export async function runCli({
   logger.log(chalk.bold("\n=== Done ===\n"));
 }
 
-const isDirectRun =
-  import.meta.url === `file://${process.argv[1]}` ||
-  process.argv[1]?.endsWith("cli.ts");
-
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   runCli().catch((err) => {
     const errMsg = err instanceof Error ? err.message : String(err);
     console.error(chalk.red(`\nFatal error: ${errMsg}\n`));
