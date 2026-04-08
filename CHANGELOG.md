@@ -1,5 +1,11 @@
 # fireflies-export
 
+## 0.1.2
+
+### Patch Changes
+
+- 93da935: Sync authoritative rate-limit blocks into the local request counter during blocked-key smoke checks and make the collector entrypoints load `.env` reliably.
+
 ## 0.1.1
 
 ### Patch Changes
