@@ -1,5 +1,11 @@
 # fireflies-export
 
+## 0.1.3
+
+### Patch Changes
+
+- 946d285: Scope local export data by verified Fireflies account and fail closed when owner lookup cannot be determined for a new API key.
+
 ## 0.1.2
 
 ### Patch Changes
