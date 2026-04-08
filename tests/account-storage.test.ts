@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type AccountIdentityError,
-  getProvisionalAccountIdForApiKey,
   prepareAccountDataDir,
 } from "../src/account-storage.js";
 import { FirefliesApiError } from "../src/client.js";
@@ -120,48 +119,14 @@ describe("account storage", () => {
     expect(client.query).not.toHaveBeenCalled();
   });
 
-  it("uses a provisional mapping when the same token is still blocked", async () => {
+  it("uses an explicit data directory override without owner lookup", async () => {
     dataRoot = await createTempDataRoot();
-    const provisionalAccountId = getProvisionalAccountIdForApiKey(
-      "blocked-provisional-key",
-    );
     const env = {
-      FIREFLIES_API_KEY: "blocked-provisional-key",
+      FIREFLIES_API_KEY: "explicit-key",
       FIREFLIES_DATA_ROOT: dataRoot,
+      FIREFLIES_DATA_DIR: join(dataRoot, "custom-account-dir"),
     } as NodeJS.ProcessEnv;
-
-    await writeJson(join(dataRoot, ".account-index.json"), {
-      tokens: {
-        [tokenHash("blocked-provisional-key")]: {
-          account_id: provisionalAccountId,
-          verified: false,
-          created_at: "2026-04-09T00:00:00.000Z",
-          updated_at: "2026-04-09T00:00:00.000Z",
-        },
-      },
-    });
-    await writeJson(
-      join(dataRoot, "accounts", provisionalAccountId, ".account.json"),
-      {
-        account_id: provisionalAccountId,
-        status: "provisional",
-        user_id: null,
-        email: null,
-        name: null,
-        created_at: "2026-04-09T00:00:00.000Z",
-        last_verified_at: null,
-      },
-    );
-
-    const client = {
-      query: vi.fn().mockRejectedValue(
-        new FirefliesApiError("rate limited", {
-          code: "too_many_requests",
-          status: 429,
-          retryAfter: Date.parse("2026-04-10T00:00:00.000Z"),
-        }),
-      ),
-    };
+    const client = { query: vi.fn() };
 
     const result = await prepareAccountDataDir({
       env,
@@ -170,144 +135,45 @@ describe("account storage", () => {
     });
 
     expect(result).toMatchObject({
-      accountId: provisionalAccountId,
-      status: "provisional",
-      source: "cached_provisional",
+      accountId: "explicit",
+      dataDir: join(dataRoot, "custom-account-dir"),
+      status: "explicit",
+      source: "explicit",
     });
+    expect(client.query).not.toHaveBeenCalled();
+    expect(existsSync(join(dataRoot, ".account-index.json"))).toBe(false);
   });
 
-  it("promotes a provisional account to a verified user_id once owner lookup succeeds", async () => {
+  it("rejects stale unverified local mappings instead of promoting them", async () => {
     dataRoot = await createTempDataRoot();
-    const provisionalAccountId =
-      getProvisionalAccountIdForApiKey("promote-key");
     const env = {
-      FIREFLIES_API_KEY: "promote-key",
+      FIREFLIES_API_KEY: "stale-provisional-key",
       FIREFLIES_DATA_ROOT: dataRoot,
     } as NodeJS.ProcessEnv;
 
     await writeJson(join(dataRoot, ".account-index.json"), {
       tokens: {
-        [tokenHash("promote-key")]: {
-          account_id: provisionalAccountId,
+        [tokenHash("stale-provisional-key")]: {
+          account_id: "provisional-deadbeef",
           verified: false,
           created_at: "2026-04-09T00:00:00.000Z",
           updated_at: "2026-04-09T00:00:00.000Z",
         },
       },
     });
-    await writeJson(
-      join(dataRoot, "accounts", provisionalAccountId, "manifest.json"),
-      {
-        last_full_sync: null,
-        entries: [],
-      },
-    );
 
-    const client = {
-      query: vi.fn().mockResolvedValue({
-        user: {
-          user_id: "user-3",
-          email: "user-3@example.com",
-          name: "User Three",
-        },
+    const client = { query: vi.fn() };
+
+    await expect(
+      prepareAccountDataDir({
+        env,
+        cwd: dataRoot,
+        client,
       }),
-    };
-
-    const result = await prepareAccountDataDir({
-      env,
-      cwd: dataRoot,
-      client,
-    });
-
-    expect(result).toMatchObject({
-      accountId: "user-3",
-      status: "verified",
-    });
-    expect(existsSync(join(dataRoot, "accounts", provisionalAccountId))).toBe(
-      false,
+    ).rejects.toThrowError(
+      "Provisional account layouts are no longer supported",
     );
-    expect(
-      existsSync(join(dataRoot, "accounts", "user-3", "manifest.json")),
-    ).toBe(true);
-  });
-
-  it("promotes only the current token when other provisional mappings exist", async () => {
-    dataRoot = await createTempDataRoot();
-    const firstApiKey = "promote-key-a";
-    const secondApiKey = "promote-key-b";
-    const firstProvisionalAccountId =
-      getProvisionalAccountIdForApiKey(firstApiKey);
-    const secondProvisionalAccountId =
-      getProvisionalAccountIdForApiKey(secondApiKey);
-    const env = {
-      FIREFLIES_API_KEY: firstApiKey,
-      FIREFLIES_DATA_ROOT: dataRoot,
-    } as NodeJS.ProcessEnv;
-
-    await writeJson(join(dataRoot, ".account-index.json"), {
-      tokens: {
-        [tokenHash(firstApiKey)]: {
-          account_id: firstProvisionalAccountId,
-          verified: false,
-          created_at: "2026-04-09T00:00:00.000Z",
-          updated_at: "2026-04-09T00:00:00.000Z",
-        },
-        [tokenHash(secondApiKey)]: {
-          account_id: secondProvisionalAccountId,
-          verified: false,
-          created_at: "2026-04-09T00:00:00.000Z",
-          updated_at: "2026-04-09T00:00:00.000Z",
-        },
-      },
-    });
-    await writeJson(
-      join(dataRoot, "accounts", firstProvisionalAccountId, "manifest.json"),
-      {
-        last_full_sync: null,
-        entries: [],
-      },
-    );
-    await writeJson(
-      join(dataRoot, "accounts", secondProvisionalAccountId, ".account.json"),
-      {
-        account_id: secondProvisionalAccountId,
-        status: "provisional",
-        user_id: null,
-        email: null,
-        name: null,
-        created_at: "2026-04-09T00:00:00.000Z",
-        last_verified_at: null,
-      },
-    );
-
-    const client = {
-      query: vi.fn().mockResolvedValue({
-        user: {
-          user_id: "user-4",
-          email: "user-4@example.com",
-          name: "User Four",
-        },
-      }),
-    };
-
-    await prepareAccountDataDir({
-      env,
-      cwd: dataRoot,
-      client,
-    });
-
-    const index = await readJson<{
-      tokens: Record<string, { account_id: string; verified: boolean }>;
-    }>(join(dataRoot, ".account-index.json"));
-
-    expect(index.tokens[tokenHash(firstApiKey)]).toMatchObject({
-      account_id: "user-4",
-      verified: true,
-    });
-    expect(index.tokens[tokenHash(secondApiKey)]).toMatchObject({
-      account_id: secondProvisionalAccountId,
-      verified: false,
-    });
+    expect(client.query).not.toHaveBeenCalled();
   });
 
   it("fails closed for a new token when owner lookup cannot be determined", async () => {

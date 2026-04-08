@@ -63,14 +63,12 @@ This will:
 data/
 ├── .account-index.json        # Local token-to-account mapping cache
 └── accounts/
-    ├── <fireflies-user-id>/
-    │   ├── .account.json      # Verified account metadata
-    │   ├── manifest.json      # Meeting index with collection status
-    │   ├── .request-counter.json
-    │   └── transcripts/
-    │       └── <meeting-id>.json
-    └── provisional-<token-fingerprint>/
-        └── ...                # Optional provisional legacy migration target
+    └── <fireflies-user-id>/
+        ├── .account.json      # Verified account metadata
+        ├── manifest.json      # Meeting index with collection status
+        ├── .request-counter.json
+        └── transcripts/
+            └── <meeting-id>.json
 ```
 
 ### Daily Workflow
@@ -88,7 +86,7 @@ It will automatically skip already-collected transcripts and stop when Fireflies
 - `.request-counter.json` is a **local estimate**, not the server's source of truth
 - The CLI stops immediately when Fireflies returns `too_many_requests`
 - If Fireflies includes `retryAfter`, the CLI stores that timestamp and refuses new runs until that time passes
-- `pnpm run smoke:rate-limit` also syncs the observed `retryAfter` into `.request-counter.json`
+- `pnpm run smoke:rate-limit` also syncs the observed `retryAfter` into `.request-counter.json` for an already-resolved account
 - The local counter still resets on a new UTC day, but that reset is advisory only
 
 ### Account-scoped storage
@@ -97,7 +95,7 @@ It will automatically skip already-collected transcripts and stop when Fireflies
 - This prevents different Fireflies accounts from sharing the same manifest, transcript cache, or retry-after block state
 - If the current API key has never been seen before, the CLI must successfully resolve the current owner before any files are written
 - If owner lookup fails for a brand-new key, the CLI stops without writing files to avoid cross-account contamination
-- If a known key was manually migrated into a provisional directory, the CLI can keep using that token-specific provisional directory until owner lookup succeeds and promotes it to the real `user_id`
+- This version does not auto-migrate older experimental account-scoping layouts or legacy unscoped `data/` directories
 - `FIREFLIES_DATA_DIR` is an advanced escape hatch for an explicit custom directory and bypasses automatic account scoping
 
 ## Environment Variables
@@ -145,9 +143,6 @@ pnpm run smoke:live
 # Optional rate-limit smoke (expects the current key to already be rate-limited)
 pnpm run smoke:rate-limit
 
-# One-time migration for legacy unscoped ./data into a provisional account dir
-pnpm run migrate:legacy-account
-
 # Full local quality gate
 pnpm run check
 
@@ -172,8 +167,7 @@ pnpm run build
 
 CI runs `pnpm run check:ci` on pushes and pull requests.
 The default test suite is network-free; keep Fireflies API smoke checks as manual or opt-in runs.
-Use `pnpm run smoke:rate-limit` only when the current key is already blocked and you want to verify the live 429 contract.
-Use `pnpm run migrate:legacy-account` once before switching from the old unscoped `data/` layout to account-scoped storage.
+Use `pnpm run smoke:rate-limit` only when the current key is already blocked and the account has already been resolved locally.
 
 ## Release workflow
 

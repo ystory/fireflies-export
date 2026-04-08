@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import {
@@ -29,8 +29,8 @@ const accountIndexSchema = z.object({
 
 interface AccountMetadata {
   account_id: string;
-  status: "verified" | "provisional";
-  user_id: string | null;
+  status: "verified";
+  user_id: string;
   email: string | null;
   name: string | null;
   created_at: string;
@@ -39,39 +39,18 @@ interface AccountMetadata {
 type AccountIndex = z.infer<typeof accountIndexSchema>;
 type AccountIndexEntry = z.infer<typeof accountIndexEntrySchema>;
 
-export function getProvisionalAccountIdForApiKey(apiKey: string): string {
-  return getProvisionalAccountIdForTokenHash(hashApiKey(apiKey));
-}
-
 export interface PrepareAccountDataDirResult {
   accountId: string;
   dataDir: string;
   dataRoot: string;
-  status: "verified" | "provisional" | "explicit";
-  source:
-    | "explicit"
-    | "cached_verified"
-    | "cached_provisional"
-    | "owner_lookup";
+  status: "verified" | "explicit";
+  source: "explicit" | "cached_verified" | "owner_lookup";
 }
 
 export interface PrepareAccountDataDirOptions {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
   client?: Pick<ReturnType<typeof createGraphQLClient>, "query">;
-}
-
-export interface MigrateLegacyDataResult {
-  accountId: string;
-  dataDir: string;
-  dataRoot: string;
-  migrated: boolean;
-}
-
-export interface MigrateLegacyDataOptions {
-  cwd?: string;
-  env?: NodeJS.ProcessEnv;
-  provisionalAccountId?: string;
 }
 
 export class AccountIdentityError extends Error {
@@ -102,10 +81,6 @@ function accountMetadataPath(dataRoot: string, accountId: string): string {
 
 function hashApiKey(apiKey: string): string {
   return createHash("sha256").update(apiKey).digest("hex");
-}
-
-function getProvisionalAccountIdForTokenHash(tokenHash: string): string {
-  return `provisional-${tokenHash}`;
 }
 
 async function loadJsonFile(filePath: string): Promise<unknown> {
@@ -246,42 +221,14 @@ async function upsertVerifiedAccount(
   });
 }
 
-async function promoteProvisionalAccount(
+function buildUnsupportedLocalMappingError(
   dataRoot: string,
-  tokenHash: string,
-  provisionalAccountId: string,
-  user: {
-    user_id: string;
-    email: string | null;
-    name: string | null;
-  },
-): Promise<void> {
-  const provisionalDir = accountDir(dataRoot, provisionalAccountId);
-  const verifiedDir = accountDir(dataRoot, user.user_id);
-  const index = await loadAccountIndex(dataRoot);
-  const previous = index.tokens[tokenHash];
-
-  if (
-    provisionalAccountId !== user.user_id &&
-    existsSync(provisionalDir) &&
-    !existsSync(verifiedDir)
-  ) {
-    await mkdir(join(dataRoot, ACCOUNTS_DIR_NAME), { recursive: true });
-    await rename(provisionalDir, verifiedDir);
-  }
-
-  index.tokens[tokenHash] = withUpdatedIndexEntry(previous, user.user_id, true);
-
-  await saveAccountIndex(dataRoot, index);
-  await saveAccountMetadata(dataRoot, {
-    account_id: user.user_id,
-    status: "verified",
-    user_id: user.user_id,
-    email: user.email,
-    name: user.name,
-    created_at: nowIso(),
-    last_verified_at: nowIso(),
-  });
+  accountId: string,
+): Error {
+  return new Error(
+    `Found an unsupported unverified local account mapping for "${accountId}" in ${accountIndexPath(dataRoot)}. ` +
+      "Provisional account layouts are no longer supported. Remove the stale local account-scoping files and retry once the current API key can resolve its owner.",
+  );
 }
 
 export async function prepareAccountDataDir({
@@ -321,34 +268,10 @@ export async function prepareAccountDataDir({
   }
 
   if (indexedAccount && !indexedAccount.verified) {
-    try {
-      const user = await lookupCurrentUser(client);
-      await promoteProvisionalAccount(
-        dataRoot,
-        tokenHash,
-        indexedAccount.account_id,
-        user,
-      );
-      const dataDir = accountDir(dataRoot, user.user_id);
-      env.FIREFLIES_DATA_DIR = dataDir;
-      return {
-        accountId: user.user_id,
-        dataDir,
-        dataRoot,
-        status: "verified",
-        source: "owner_lookup",
-      };
-    } catch {
-      const dataDir = accountDir(dataRoot, indexedAccount.account_id);
-      env.FIREFLIES_DATA_DIR = dataDir;
-      return {
-        accountId: indexedAccount.account_id,
-        dataDir,
-        dataRoot,
-        status: "provisional",
-        source: "cached_provisional",
-      };
-    }
+    throw buildUnsupportedLocalMappingError(
+      dataRoot,
+      indexedAccount.account_id,
+    );
   }
 
   try {
@@ -366,80 +289,4 @@ export async function prepareAccountDataDir({
   } catch (error) {
     throw buildIdentityLookupError(error);
   }
-}
-
-export async function migrateLegacyDataToProvisionalAccount({
-  cwd = process.cwd(),
-  env = process.env,
-  provisionalAccountId,
-}: MigrateLegacyDataOptions = {}): Promise<MigrateLegacyDataResult> {
-  validateConfig({ apiKey: env.FIREFLIES_API_KEY ?? "" });
-
-  const dataRoot = getDataRoot(env, cwd);
-  const tokenHash = hashApiKey(env.FIREFLIES_API_KEY ?? "");
-  const resolvedProvisionalAccountId =
-    provisionalAccountId ?? getProvisionalAccountIdForTokenHash(tokenHash);
-  const legacyManifestPath = join(dataRoot, "manifest.json");
-  const legacyCounterPath = join(dataRoot, ".request-counter.json");
-  const legacyTranscriptsDir = join(dataRoot, "transcripts");
-  const provisionalDir = accountDir(dataRoot, resolvedProvisionalAccountId);
-  const provisionalManifestPath = join(provisionalDir, "manifest.json");
-  const provisionalCounterPath = join(provisionalDir, ".request-counter.json");
-  const provisionalTranscriptsDir = join(provisionalDir, "transcripts");
-
-  const legacyExists =
-    existsSync(legacyManifestPath) ||
-    existsSync(legacyCounterPath) ||
-    existsSync(legacyTranscriptsDir);
-
-  await mkdir(join(dataRoot, ACCOUNTS_DIR_NAME), { recursive: true });
-
-  if (legacyExists) {
-    if (
-      existsSync(provisionalManifestPath) ||
-      existsSync(provisionalCounterPath) ||
-      existsSync(provisionalTranscriptsDir)
-    ) {
-      throw new Error(
-        `Refusing to migrate legacy data into ${provisionalDir} because it already contains files.`,
-      );
-    }
-
-    await mkdir(provisionalDir, { recursive: true });
-
-    if (existsSync(legacyManifestPath)) {
-      await rename(legacyManifestPath, provisionalManifestPath);
-    }
-    if (existsSync(legacyCounterPath)) {
-      await rename(legacyCounterPath, provisionalCounterPath);
-    }
-    if (existsSync(legacyTranscriptsDir)) {
-      await rename(legacyTranscriptsDir, provisionalTranscriptsDir);
-    }
-  }
-
-  const index = await loadAccountIndex(dataRoot);
-  index.tokens[tokenHash] = withUpdatedIndexEntry(
-    index.tokens[tokenHash],
-    resolvedProvisionalAccountId,
-    false,
-  );
-  await saveAccountIndex(dataRoot, index);
-
-  await saveAccountMetadata(dataRoot, {
-    account_id: resolvedProvisionalAccountId,
-    status: "provisional",
-    user_id: null,
-    email: null,
-    name: null,
-    created_at: nowIso(),
-    last_verified_at: null,
-  });
-
-  return {
-    accountId: resolvedProvisionalAccountId,
-    dataDir: provisionalDir,
-    dataRoot,
-    migrated: legacyExists,
-  };
 }
