@@ -1,5 +1,11 @@
 # fireflies-export
 
+## 0.1.5
+
+### Patch Changes
+
+- 81bdce1: Document Agent Skills installation, local `.env` bootstrap guidance, and free-plan quota expectations for Fireflies exports.
+
 ## 0.1.4
 
 ### Patch Changes
