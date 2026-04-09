@@ -61,7 +61,7 @@ npx skills add https://github.com/ystory/fireflies-export --skill fireflies-expo
 
 If the skill does not appear immediately, restart the agent session and reopen the same working directory.
 
-The skill follows the same `.env` setup described above. If `.env` is missing, a compatible agent can ask for your Fireflies API key, create the file in the current working directory, and then run the export.
+The skill follows the same `.env` setup described above. If the current environment and local `.env` do not already provide a non-empty `FIREFLIES_API_KEY`, a compatible agent can ask for your Fireflies API key, create or update `.env` in the current working directory, and then run the export.
 In most Agent Skills environments, users can ask naturally without naming the skill explicitly.
 
 ### Example prompts

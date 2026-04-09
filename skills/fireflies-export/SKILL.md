@@ -28,12 +28,12 @@ Assume the command runs from the directory that contains the user's `.env` file 
 
 ## Required Setup
 
-First check for either of these before asking the user for anything:
+Before asking the user for anything, confirm whether a non-empty `FIREFLIES_API_KEY` is already available from either of these sources:
 
-- A `.env` file in the current working directory
 - An existing `FIREFLIES_API_KEY` in the environment
+- A local `.env` file in the current working directory that sets `FIREFLIES_API_KEY` to a non-empty value
 
-If both are missing, ask the user for their Fireflies API key and create a local `.env` file in the current working directory before running the export.
+If neither source provides a non-empty key, ask the user for their Fireflies API key and create or update a local `.env` file in the current working directory before running the export.
 
 If `.env.example` exists in that directory, prefer copying it to `.env` and filling in the key. Otherwise, create `.env` manually with at least:
 
@@ -78,7 +78,8 @@ Follow these safety rules when guiding a user:
 
 - Do not suggest fallback behavior that mixes multiple Fireflies accounts into the same local directory
 - Do not treat the local request counter as the server's source of truth
-- Do not ask for the API key again if `.env` or the current environment already provides it
+- Do not treat the mere presence of `.env` as proof that setup is complete
+- Do not ask for the API key again if the current environment or local `.env` already provides a non-empty `FIREFLIES_API_KEY`
 - Do not echo the user's API key back in logs or explanations unless they explicitly ask to inspect it
 - Do not describe repository-only commands, test commands, or development scripts as part of the public interface
 - Do not promise writes for a blocked or unverified key when owner resolution fails
