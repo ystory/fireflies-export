@@ -32,17 +32,43 @@ npx fireflies-export
 ## Setup
 
 1. Get your API key from [Fireflies Integrations → Fireflies API](https://app.fireflies.ai/integrations/custom/fireflies)
-2. Copy `.env.example` to `.env` in the directory where you'll run the tool:
+2. Create a `.env` file in the directory where you'll run the tool.
+   If you're working from a repository checkout, you can copy `.env.example`:
 
 ```bash
 cp .env.example .env
 ```
 
-3. Fill in your API key:
+   If you're using the published CLI outside this repository, create `.env` manually instead.
+
+3. Fill in at least your API key:
 
 ```bash
 FIREFLIES_API_KEY=your_api_key_here
 ```
+
+4. Optional: add `FIREFLIES_DATA_ROOT` or `FIREFLIES_DATA_DIR` if you want custom local storage.
+
+## Agent Skills
+
+This repository also includes a public `fireflies-export` skill in the standard Agent Skills `SKILL.md` format.
+
+Install it locally in any compatible agent environment:
+
+```bash
+npx skills add https://github.com/ystory/fireflies-export --skill fireflies-export -y
+```
+
+If the skill does not appear immediately, restart the agent session and reopen the same working directory.
+
+The skill follows the same `.env` setup described above. If the current environment and local `.env` do not already provide a non-empty `FIREFLIES_API_KEY`, a compatible agent can ask for your Fireflies API key, create or update `.env` in the current working directory, and then run the export.
+In most Agent Skills environments, users can ask naturally without naming the skill explicitly.
+
+### Example prompts
+
+- `Download my Fireflies transcripts in this folder.`
+- `Set up Fireflies export here. If you need my API key, ask me for it.`
+- `Run Fireflies export here and tell me if Fireflies wants us to wait before retrying.`
 
 ## Usage
 
@@ -73,7 +99,7 @@ data/
 
 ### Daily Workflow
 
-With 200+ meetings, the initial export takes several days on the Free plan (~36 transcripts/day after list collection). Just run the command once daily:
+On the Free plan, the CLI starts from a local estimate of 50 API calls per UTC day. The meeting-list step also uses part of that budget, so the actual number of transcripts per run varies and larger backfills often take several days. Just run the command once daily:
 
 ```bash
 fireflies-export
@@ -118,7 +144,7 @@ All other data — including full conversation sentences, speakers, attendees, a
 
 ## Development
 
-This repository also includes a reusable public CLI skill for agents under `skills/fireflies-export`.
+This repository also includes the source for the public `fireflies-export` Agent Skills package under `skills/fireflies-export`.
 
 ```bash
 # Clone and install
