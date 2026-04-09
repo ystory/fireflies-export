@@ -32,6 +32,7 @@ describe("collectList", () => {
 
   afterEach(async () => {
     queryMock.mockReset();
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
     vi.resetModules();
@@ -124,6 +125,8 @@ describe("collectList", () => {
   it("stores server retryAfter when the list endpoint is rate-limited", async () => {
     dataDir = await createTempDataDir();
     vi.stubEnv("FIREFLIES_API_KEY", "test-api-key");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-08T12:00:00.000Z"));
 
     const retryAfter = Date.parse("2026-04-09T00:00:00.000Z");
 

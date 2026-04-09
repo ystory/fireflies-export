@@ -1,5 +1,16 @@
+import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+function canonicalizePath(filePath: string): string {
+  const resolvedPath = resolve(filePath);
+
+  try {
+    return realpathSync(resolvedPath);
+  } catch {
+    return resolvedPath;
+  }
+}
 
 export function isDirectRun(
   importMetaUrl: string,
@@ -9,5 +20,7 @@ export function isDirectRun(
     return false;
   }
 
-  return fileURLToPath(importMetaUrl) === resolve(argv1);
+  return (
+    canonicalizePath(fileURLToPath(importMetaUrl)) === canonicalizePath(argv1)
+  );
 }
