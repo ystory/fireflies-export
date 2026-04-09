@@ -61,6 +61,8 @@ Follow these safety rules when guiding a user:
 - Do not treat the local request counter as the server's source of truth
 - Do not describe repository-only commands, test commands, or development scripts as part of the public interface
 - Do not promise writes for a blocked or unverified key when owner resolution fails
+- Do not treat exit code `0` alone as proof that an export ran; confirm the CLI banner, collection logs, or `data/accounts/*` output before calling it successful
+- If `npx fireflies-export` exits without logs or account-scoped output, treat it as a suspected no-op and re-check the resolved entrypoint before declaring success
 
 When a user needs a custom path, prefer `FIREFLIES_DATA_DIR=/path ...` over ad hoc file moves.
 
@@ -73,6 +75,8 @@ Interpret these failures in the public CLI context:
 - `Could not determine the Fireflies account... no files were written`: owner lookup failed, so the CLI refused to start to protect local data boundaries
 
 When explaining a failure, separate the meaning of the error from the next action. Keep the next action short and concrete.
+
+Keep `node .../dist/cli.js` as an internal diagnostic fallback only. Do not present it as the normal public CLI usage unless the user is explicitly debugging entrypoint behavior.
 
 ## Command Examples
 

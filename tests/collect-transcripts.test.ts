@@ -34,6 +34,7 @@ describe("collectTranscripts", () => {
 
   afterEach(async () => {
     queryMock.mockReset();
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
     vi.resetModules();
@@ -102,6 +103,8 @@ describe("collectTranscripts", () => {
   it("stops on rate-limit errors without marking the transcript as collected", async () => {
     dataDir = await createTempDataDir();
     vi.stubEnv("FIREFLIES_API_KEY", "test-api-key");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-08T12:00:00.000Z"));
 
     const config = getConfig();
     const retryAfter = Date.parse("2026-04-09T00:00:00.000Z");
