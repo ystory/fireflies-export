@@ -1,5 +1,11 @@
 # fireflies-export
 
+## 0.1.4
+
+### Patch Changes
+
+- 39fde9b: Fix symlinked CLI entrypoints such as `npx fireflies-export` so they run the export instead of silently exiting without work.
+
 ## 0.1.3
 
 ### Patch Changes
