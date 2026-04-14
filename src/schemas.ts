@@ -128,7 +128,10 @@ export const transcriptSchema = z
     organizer_email: nullableStringSchema,
     participants: z.array(z.string()).nullish(),
     transcript_url: nullableStringSchema,
-    speakers: z.array(speakerSchema).default([]),
+    speakers: z
+      .array(speakerSchema)
+      .nullish()
+      .transform((value) => value ?? []),
     sentences: z.array(sentenceSchema).default([]),
     meeting_attendees: z.array(transcriptAttendeeSchema).default([]),
     meeting_attendance: z.array(transcriptAttendanceSchema).default([]),
