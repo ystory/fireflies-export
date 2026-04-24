@@ -1,5 +1,11 @@
 # fireflies-export
 
+## 0.1.6
+
+### Patch Changes
+
+- d07e93a: Allow null transcript speakers by normalizing to an empty array.
+
 ## 0.1.5
 
 ### Patch Changes
