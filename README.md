@@ -2,7 +2,7 @@
 
 CLI tool to incrementally export meeting transcripts from [Fireflies.ai](https://fireflies.ai) via its GraphQL API.
 
-Designed for the **Free plan** — keeps a local usage estimate, honors the API's explicit rate-limit response, and picks up where it left off on each run.
+Designed for Fireflies API plans with daily request ceilings — keeps a local usage estimate, honors the API's explicit rate-limit response, and picks up where it left off on each run.
 
 ## Features
 
@@ -10,6 +10,15 @@ Designed for the **Free plan** — keeps a local usage estimate, honors the API'
 - **Crash recovery** — saves progress after each transcript; safely resume anytime
 - **Rate limit aware** — tracks a local usage estimate and stops when Fireflies returns an explicit quota error
 - **Raw data preservation** — stores original API responses as JSON files
+- **Token-conscious archive** — downloads transcript JSON directly to disk so AI tools only need to read the specific local files or snippets they are asked to analyze
+
+## Why local export if Fireflies MCP exists?
+
+Fireflies [MCP tools](https://docs.fireflies.ai/mcp-tools/overview) and AI connectors are useful for interactive lookup: searching meetings, listing recent transcripts, fetching a single transcript, or asking for a summary when Fireflies has one. They are not a full replacement for a local archive.
+
+MCP tools return meeting data back through the AI client. That is convenient for one-off questions, but long transcript bodies can consume model context tokens and may be limited by the client or model response path. `fireflies-export` fetches transcript data through the Fireflies GraphQL API and writes structured JSON directly to disk, so the collection step does not require streaming every transcript through the LLM context. You can later search or read only the local files needed for a specific task.
+
+Use MCP for ad hoc discovery and analysis. Use `fireflies-export` when you need durable, account-scoped, resumable storage with a manifest, transcript files, raw sentence timing, and retry-after state.
 
 ## Prerequisites
 
@@ -99,7 +108,7 @@ data/
 
 ### Daily Workflow
 
-On the Free plan, the CLI starts from a local estimate of 50 API calls per UTC day. The meeting-list step also uses part of that budget, so the actual number of transcripts per run varies and larger backfills often take several days. Just run the command once daily:
+Fireflies [documents](https://docs.fireflies.ai/fundamentals/limits) Free and Pro API plans at 50 requests per day, while Business and Enterprise plans use a higher per-minute limit. The CLI starts from a conservative local estimate of 50 API calls per UTC day. The meeting-list step also uses part of that budget, so the actual number of transcripts per run varies and larger backfills often take several days on daily-limited plans. Just run the command once daily:
 
 ```bash
 fireflies-export
@@ -132,15 +141,16 @@ It will automatically skip already-collected transcripts and stop when Fireflies
 | `FIREFLIES_DATA_ROOT` | | `./data` | Shared root for automatic account-scoped storage |
 | `FIREFLIES_DATA_DIR` | | — | Explicit final data directory override; bypasses automatic account scoping |
 
-## Free Plan Limitations
+## Plan-dependent fields not collected
 
-The following transcript fields are only available on paid plans and are **not collected**:
+The following transcript fields are plan-dependent or optional in the Fireflies API and are **not collected** by this CLI:
 
 - `audio_url` (Pro+)
 - `video_url` (Business+)
-- `summary` (paid plans)
+- `analytics` (Pro+)
+- `summary` (AI-generated summary data)
 
-All other data — including full conversation sentences, speakers, attendees, and meeting metadata — is collected on the Free plan.
+The CLI focuses on transcript archival data: full conversation sentences, raw text, speaker attribution, timestamps, attendees, and meeting metadata.
 
 ## Development
 

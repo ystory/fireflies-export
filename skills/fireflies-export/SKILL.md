@@ -69,7 +69,7 @@ Guide users with these assumptions:
 
 - The local estimate starts at 50 API calls per UTC day, not 50 transcript downloads
 - Collecting the meeting list also uses part of that budget, so transcripts-per-run varies
-- Larger backfills on the Free plan often take multiple daily runs
+- Fireflies documents Free and Pro API plans at 50 requests per day; larger backfills on daily-limited plans often take multiple daily runs
 - Fireflies `too_many_requests` and `retryAfter` are the authoritative stop signals; the local counter is advisory only
 
 ## Safe Operating Rules
